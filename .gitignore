@@ -1,0 +1,22 @@
+# deps / builds
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# pipeline working files (videos, models, raw landmarks) — regenerate with pipeline/*.py
+pipeline/.cache/
+pipeline/.venv/
+__pycache__/
+
+# iOS build products
+ios/App/build/
+ios/DerivedData/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/App/config.xml
+
+# misc
+.DS_Store
+*.log
+.env*
