@@ -6,7 +6,7 @@ export function AboutPanel({ index }: { index: SignIndex | null }) {
     <div className="about">
       <div className="about-head">
         <img src={logo} alt="" width={68} height={68} />
-        <p className="tagline">Bridging Silence, Building Connections</p>
+        <h1 className="tagline">Bridging Silence, Building Connections</h1>
       </div>
       <p className="lede">
         Sign Saathi turns English and Urdu into Pakistan Sign Language, so families and teachers can start talking with
@@ -38,10 +38,11 @@ export function AboutPanel({ index }: { index: SignIndex | null }) {
           </a>{' '}
           under {index?.source.license ?? 'CC BY 4.0'}. {index?.source.changes}
         </dd>
-        <dt>Avatar</dt>
+        <dt>Signers</dt>
         <dd>
-          VRM sample model © 2022 pixiv Inc., used under the VRM Public License 1.0. Skin, hair and eyes recoloured,
-          and the top darkened so the hands read clearly.
+          Two sample models by pixiv Inc., restyled in the app. The woman is the VRM 1.0 sample (© 2022 pixiv Inc.,
+          VRM Public License 1.0), dressed in a hijab, an abaya and full sleeves. The man is AvatarSample_C by VRoid
+          Project, used under its VRoid Hub terms, given short hair, a trimmed beard and a plain shirt.
         </dd>
         <dt>Built with</dt>
         <dd>three.js, three-vrm, MediaPipe, React and Capacitor.</dd>

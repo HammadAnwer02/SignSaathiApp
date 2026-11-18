@@ -1,6 +1,8 @@
 // Which avatar bones we drive, how they chain, and what their rest (T-pose) directions are.
 // Works on three-vrm *normalized* bones: at rest every bone has identity rotation and its
-// local axes line up with the model's axes (VRM 1.0 faces +Z, the avatar's left is +X).
+// local axes line up with the model's axes. Everything here is in VRM 1.0 axes (the avatar faces +Z,
+// its left is +X); a VRM 0.x model faces -Z inside its scene, so its measurements are turned round
+// to match and its poses turned back when they are applied (see Rest.vrm0).
 
 import { Box3, Vector3, type Object3D } from 'three'
 import type { VRM, VRMHumanBoneName } from '@pixiv/three-vrm'
@@ -71,6 +73,14 @@ export interface Rest {
   chestY: number
   hipsY: number
   shoulderWidth: number
+  /** a VRM 0.x model: its bones' axes are turned half round (x and z flipped), so poses must be too */
+  vrm0: boolean
+}
+
+/** Express a VRM 1.0-axes rotation in a VRM 0.x model's normalized bones (a half turn about y). */
+export function toVrm0(q: { x: number; y: number; z: number; w: number }) {
+  q.x = -q.x
+  q.z = -q.z
 }
 
 export function measureRest(vrm: VRM): Rest {
@@ -78,9 +88,12 @@ export function measureRest(vrm: VRM): Rest {
   h.resetNormalizedPose()
   vrm.scene.updateMatrixWorld(true)
   const node = (name: VRMHumanBoneName) => h.getNormalizedBoneNode(name)
+  const vrm0 = vrm.meta.metaVersion === '0'
   const pos = (name: VRMHumanBoneName): Vector3 | null => {
     const n = node(name)
-    return n ? vrm.scene.worldToLocal(n.getWorldPosition(new Vector3())) : null
+    if (!n) return null
+    const p = vrm.scene.worldToLocal(n.getWorldPosition(new Vector3()))
+    return vrm0 ? p.set(-p.x, p.y, -p.z) : p
   }
   const between = (a: VRMHumanBoneName, b: VRMHumanBoneName, fallback: Vector3) => {
     const pa = pos(a)
@@ -127,5 +140,6 @@ export function measureRest(vrm: VRM): Rest {
     chestY: y('chest', y('spine', 1.1)),
     hipsY: y('hips', 0.9),
     shoulderWidth: lu && ru ? lu.distanceTo(ru) : 0.3,
+    vrm0,
   }
 }

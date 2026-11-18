@@ -7,7 +7,7 @@ import {
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { VRMLoaderPlugin, VRMUtils, type VRM } from '@pixiv/three-vrm'
 import { loadClip, loadIndex } from '../signs/data'
-import { BONE_COUNT, CHEST, NECK, measureRest, type Rest } from './rig'
+import { BONE_COUNT, CHEST, NECK, measureRest, toVrm0, type Rest } from './rig'
 import { EXPRESSIONS, Solver, type Motion } from './solver'
 import { Player } from './player'
 import { applyLook } from './looks'
@@ -197,15 +197,21 @@ export class AvatarEngine {
   }
 
   private applyPose(pose: Float32Array) {
-    const nodes = this.rest!.nodes
-    for (let b = 0; b < BONE_COUNT; b++) nodes[b]?.quaternion.fromArray(pose, b * 4)
+    const { nodes, vrm0 } = this.rest!
+    for (let b = 0; b < BONE_COUNT; b++) {
+      const q = nodes[b]?.quaternion
+      if (!q) continue
+      q.fromArray(pose, b * 4)
+      if (vrm0) toVrm0(q)
+    }
   }
 
   private breatheQ = new Quaternion()
   private breatheAxis = new Vector3(1, 0, 0)
   private breathe() {
-    const nodes = this.rest!.nodes
-    const a = Math.sin(this.t * ((2 * Math.PI) / 4.2)) * 0.012
+    const { nodes, vrm0 } = this.rest!
+    // a pitch about x: the same angle tips the other way on a model that faces the other way
+    const a = Math.sin(this.t * ((2 * Math.PI) / 4.2)) * 0.012 * (vrm0 ? -1 : 1)
     this.breatheQ.setFromAxisAngle(this.breatheAxis, a)
     nodes[CHEST]?.quaternion.multiply(this.breatheQ)
     this.breatheQ.setFromAxisAngle(this.breatheAxis, -a * 0.6)

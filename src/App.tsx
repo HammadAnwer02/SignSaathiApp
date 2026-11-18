@@ -10,7 +10,6 @@ import { signerById, type SignerId } from './avatar/signers'
 import { loadIndex, type SignIndex } from './signs/data'
 import { buildLexicon, signLabel, translate, type GlossItem } from './text/translate'
 import { hideSplash, prefs } from './native'
-import logo from './assets/logo.svg'
 
 const RECENT_MAX = 5
 
@@ -166,14 +165,6 @@ export function App() {
   return (
     <>
       <div className={`app tab-${tab}`} inert={!!welcome}>
-        <header className="masthead">
-          <span className="brand">
-            <img src={logo} alt="" width={32} height={32} />
-            <span className="wordmark">Sign Saathi</span>
-          </span>
-          <span className="wordmark-ur ur" lang="ur">سائن ساتھی</span>
-        </header>
-
         <AvatarStage
           signer={signerById(signerId)}
           loadSigner={signerId !== null}
@@ -181,7 +172,7 @@ export function App() {
           onEngine={onEngine}
           caption={caption}
           playing={playing}
-          canReplay={!!perf?.units.length}
+          canReplay={ready && !!perf?.units.length}
           speed={speed}
           onSpeed={setSpeed}
           onReplay={replay}

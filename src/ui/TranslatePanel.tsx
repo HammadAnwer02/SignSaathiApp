@@ -59,6 +59,7 @@ export function TranslatePanel({ ready, sentence, activeItem, recent, onSubmit, 
                 <li key={i}>
                   <button
                     className={`chip ${it.kind === 'spell' ? 'spelled' : ''} ${i === activeItem ? 'on' : ''}`}
+                    disabled={!ready}
                     onClick={() => {
                       tap()
                       onPlayItem(i)
