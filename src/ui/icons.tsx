@@ -31,3 +31,9 @@ export const SearchIcon = ({ size = 20 }: P) =>
 
 export const LettersIcon = ({ size = 14 }: P) =>
   svg(size, <><path d="M4 18 8 6l4 12M5.5 14h5" /><path d="M15 10h5l-5 8h5" /></>)
+
+export const ClearIcon = ({ size = 20 }: P) =>
+  svg(size, <path d="M6 6l12 12M18 6 6 18" />)
+
+export const RecentIcon = ({ size = 20 }: P) =>
+  svg(size, <><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /><path d="M12 8v4l3 2" /></>)

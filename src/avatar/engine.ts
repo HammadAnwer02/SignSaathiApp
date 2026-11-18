@@ -2,8 +2,7 @@
 // that feeds Player poses into the avatar's normalized bones.
 
 import {
-  AmbientLight, Clock, Color, DirectionalLight, PerspectiveCamera, Quaternion, Scene, Vector3, WebGLRenderer,
-  type Material, type Mesh,
+  AmbientLight, Clock, DirectionalLight, PerspectiveCamera, Quaternion, Scene, Vector3, WebGLRenderer,
 } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { VRMLoaderPlugin, VRMUtils, type VRM } from '@pixiv/three-vrm'
@@ -11,6 +10,7 @@ import { loadClip, loadIndex } from '../signs/data'
 import { BONE_COUNT, CHEST, NECK, measureRest, type Rest } from './rig'
 import { EXPRESSIONS, Solver, type Motion } from './solver'
 import { Player } from './player'
+import { applyLook } from './looks'
 
 export interface PlayRequest {
   id: string
@@ -20,8 +20,6 @@ export interface PlayRequest {
 
 export type EngineState = 'loading' | 'ready' | 'error'
 
-const SHIRT = new Color('#24345a')
-const SHIRT_SHADE = new Color('#141d33')
 /** height of the band the stage controls take at the top of the stage (.stage-controls: 12px inset + 44px buttons) */
 const CONTROLS_PX = 60
 
@@ -41,6 +39,7 @@ export class AvatarEngine {
   private nextBlink = 2
   private disposed = false
   private playToken = 0
+  private loadToken = 0
   speed = 1
   onChip?: (chip: number) => void
   onPlaying?: (playing: boolean) => void
@@ -65,28 +64,26 @@ export class AvatarEngine {
     this.loop()
   }
 
+  /** Load a signer, replacing the one on stage (if any). Resolves once the new signer is ready to play. */
   async load(url: string) {
+    const token = ++this.loadToken
+    this.unload()
     const loader = new GLTFLoader()
     loader.register((parser) => new VRMLoaderPlugin(parser))
     const gltf = await loader.loadAsync(url)
-    if (this.disposed) return
     const vrm = gltf.userData.vrm as VRM
+    if (this.disposed || token !== this.loadToken) {
+      // a newer signer was asked for while this one downloaded
+      VRMUtils.deepDispose(gltf.scene)
+      return
+    }
     VRMUtils.removeUnnecessaryVertices(gltf.scene)
     VRMUtils.combineSkeletons(gltf.scene)
     if (vrm.meta.metaVersion === '0') VRMUtils.rotateVRM0(vrm)
     vrm.scene.traverse((o) => {
       o.frustumCulled = false
-      // Interpreters wear plain dark tops so the hands read clearly; dye the avatar's top to match.
-      const mesh = o as Mesh
-      if (!mesh.isMesh) return
-      for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-        if (/tops/i.test(m.name)) {
-          const mt = m as Material & { color?: Color; shadeColorFactor?: Color }
-          mt.color?.set(SHIRT)
-          mt.shadeColorFactor?.set(SHIRT_SHADE)
-        }
-      }
     })
+    applyLook(vrm)
     this.scene.add(vrm.scene)
     if (vrm.lookAt) vrm.lookAt.target = this.camera
     this.vrm = vrm
@@ -147,12 +144,28 @@ export class AvatarEngine {
     cancelAnimationFrame(this.raf)
     this.resizeObs.disconnect()
     document.removeEventListener('visibilitychange', this.onVisibility)
-    if (this.vrm) VRMUtils.deepDispose(this.vrm.scene)
+    this.unload()
     this.renderer.dispose()
+    this.renderer.forceContextLoss()
     this.renderer.domElement.remove()
   }
 
   // ------------------------------------------------------------------ internals
+
+  /** Take the current signer off stage; solved motions belong to its skeleton, so they go too. */
+  private unload() {
+    this.playToken++
+    if (this.player?.playing) this.onPlaying?.(false)
+    this.player = null
+    this.solver = null
+    this.rest = null
+    this.motions.clear()
+    if (this.vrm) {
+      this.scene.remove(this.vrm.scene)
+      VRMUtils.deepDispose(this.vrm.scene)
+      this.vrm = null
+    }
+  }
 
   /** Stop drawing while the app is in the background or the stage is collapsed (saves battery). */
   private hiddenStage = false

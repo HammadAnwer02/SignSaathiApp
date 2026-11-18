@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AvatarEngine } from '../avatar/engine'
+import { SIGNERS, type Signer, type SignerId } from '../avatar/signers'
 import { ReplayIcon, StopIcon } from './icons'
 import { hideSplash, tap } from '../native'
 
@@ -14,6 +15,10 @@ const SPEEDS = [
 ]
 
 interface Props {
+  signer: Signer
+  /** false until the saved signer choice is known */
+  loadSigner: boolean
+  onSigner: (id: SignerId) => void
   onEngine: (e: AvatarEngine) => void
   caption: Caption | null
   playing: boolean
@@ -24,26 +29,45 @@ interface Props {
   onStop: () => void
 }
 
-export function AvatarStage({ onEngine, caption, playing, canReplay, speed, onSpeed, onReplay, onStop }: Props) {
+export function AvatarStage(props: Props) {
+  const { signer, loadSigner, onSigner, onEngine, caption, playing, canReplay, speed, onSpeed, onReplay, onStop } = props
   const host = useRef<HTMLDivElement>(null)
+  const engineRef = useRef<AvatarEngine | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
 
   useEffect(() => {
     const engine = new AvatarEngine(host.current!)
+    engineRef.current = engine
+    ;(window as unknown as { __engine?: AvatarEngine }).__engine = engine
+    return () => {
+      engine.dispose()
+      engineRef.current = null
+    }
+  }, [])
+
+  // load the chosen signer, and swap it in place when the choice changes
+  useEffect(() => {
+    const engine = engineRef.current
+    if (!engine || !loadSigner) return
+    let live = true
+    setState('loading')
     engine
-      .load(`${import.meta.env.BASE_URL}avatar/avatar.vrm`)
+      .load(signer.url)
       .then(() => {
+        if (!live) return
         setState('ready')
         onEngine(engine)
       })
       .catch((err) => {
+        if (!live) return
         console.error(err)
         setState('error')
         hideSplash() // otherwise the launch screen would cover the error for good
       })
-    ;(window as unknown as { __engine?: AvatarEngine }).__engine = engine
-    return () => engine.dispose()
-  }, [onEngine])
+    return () => {
+      live = false
+    }
+  }, [signer.url, loadSigner, onEngine])
 
   return (
     <section className="stage" aria-label="Signing avatar">
@@ -52,6 +76,26 @@ export function AvatarStage({ onEngine, caption, playing, canReplay, speed, onSp
         <p className="stage-status" role="status">
           {state === 'loading' ? 'Getting the signer ready…' : 'The avatar could not load. Close and reopen the app.'}
         </p>
+      )}
+
+      {SIGNERS.length > 1 && (
+        <div className="signer" role="radiogroup" aria-label="Signer">
+          {SIGNERS.map((s) => (
+            <button
+              key={s.id}
+              role="radio"
+              aria-checked={signer.id === s.id}
+              className={signer.id === s.id ? 'on' : ''}
+              onClick={() => {
+                if (signer.id === s.id) return
+                tap()
+                onSigner(s.id)
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       )}
 
       <div className="stage-controls">

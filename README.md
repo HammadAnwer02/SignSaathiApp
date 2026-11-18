@@ -81,9 +81,15 @@ next to the source video frame (`start` in `index.json` is the trimmed clip's fi
 - **Signs:** PSL dictionary `pk-hfad-1` (775 usable signs) recorded at Hamza Foundation Academy for the Deaf,
   Lahore, published by the [sign-language-translator](https://github.com/sign-language-translator/sign-language-datasets)
   project under **CC BY 4.0**. The credit in the About screen is required by the licence.
-- **Avatar (stand-in):** `VRM1_Constraint_Twist_Sample` © 2022 pixiv Inc., VRM Public License 1.0 (commercial use
-  and redistribution allowed). Its top is recoloured at runtime so hands read clearly.
-- **Fonts:** Atkinson Hyperlegible Next and Noto Nastaliq Urdu (SIL Open Font License).
+- **Avatar (stand-in):** `VRM1_Constraint_Twist_Sample` © 2022 pixiv Inc., VRM Public License 1.0 (commercial use,
+  modification and redistribution allowed). At runtime its skin, hair and eyes are recoloured to stand in for a
+  Pakistani woman and its top is darkened so hands read clearly (`src/avatar/looks.ts`, matched by model name, so
+  custom signers are never recoloured).
+- **Fonts:** Lato and Noto Nastaliq Urdu (SIL Open Font License).
+- **Brand:** logo, colours (petrol `#053B50`, teal `#176B87`, aqua `#64CCC5`, cream `#F6F4EB`) and type come from the
+  SignSaathi Figma file. The logo is `src/assets/logo.svg` exactly as exported; the app icon and launch images in
+  `ios/App/App/Assets.xcassets` are rendered from it (`rsvg-convert` for the SVG, `ffmpeg` to place it on the
+  petrol or cream background).
 
 ## Known gaps before publishing
 
@@ -93,5 +99,26 @@ next to the source video frame (`start` in `index.json` is the trimmed clip's fi
 - **Source check:** some clips (e.g. *house*) carry a TV channel logo and a different signer, so confirm with the
   dataset authors that every video is covered by CC BY 4.0.
 - **Review:** every sign should be checked by a fluent (ideally Deaf) PSL signer.
-- **Avatar:** replace the stand-in with a custom VRM (VRoid Studio is free), ideally in local dress.
+- **Signers:** a female and a male Pakistani signer, made in VRoid Studio (see below).
 - **Not built yet:** voice input, lessons and quizzes, camera practice.
+
+## Signers (female and male)
+
+Each signer is a VRM file in `src/assets/avatars/`, named `female.vrm` or `male.vrm`. The build picks up whichever
+exist, and a Female / Male switch appears on the stage once there are two (the choice is remembered). Today
+`female.vrm` is the pixiv stand-in; replace it, and add `male.vrm`, with your own characters.
+
+Making them in [VRoid Studio](https://vroid.com/en/studio) (free):
+
+- **Look:** South Asian skin tone, black hair, dark brown eyes. Keep the face and the hands uncovered.
+- **Clothes:** a plain, dark kameez with full or three-quarter sleeves and shalwar. Interpreters wear plain dark
+  tops so the hands stand out, so avoid prints, sequins, bangles and long loose cuffs. A dupatta or hijab is fine
+  if it sits behind the shoulders and doesn't hang in front of the chest, where most signs happen.
+- **Hair:** for long hair, tie it back or keep it behind the shoulders; hair that swings in front of the body hides
+  handshapes.
+- **Export:** export as VRM (1.0 if offered; 0.x loads too). Keep the default humanoid bones, fingers included,
+  and the blink expressions. Set the licence to your own terms, and if the file is over ~15 MB use the export's
+  polygon reduction and a 2048 px texture atlas, since it ships inside the app.
+- **Install:** save the files as `src/assets/avatars/female.vrm` and `src/assets/avatars/male.vrm`, then run
+  `npm run ios`. Check a few signs with both (`window.__engine.debugPose(id, frame)` in a browser) and update the
+  Avatar credit in `src/ui/AboutPanel.tsx`.

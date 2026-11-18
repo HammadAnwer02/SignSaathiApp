@@ -11,13 +11,15 @@ const TABS: { key: Tab; label: string; Icon: () => React.ReactElement }[] = [
 export function TabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   return (
     <nav className="tabbar" aria-label="Sections">
-      {TABS.map(({ key, label, Icon }) => (
-        <button key={key} className={tab === key ? 'on' : ''} aria-current={tab === key ? 'page' : undefined}
-          onClick={() => onTab(key)}>
-          <Icon />
-          <span>{label}</span>
-        </button>
-      ))}
+      <div className="tabbar-pill">
+        {TABS.map(({ key, label, Icon }) => (
+          <button key={key} className={tab === key ? 'on' : ''} aria-current={tab === key ? 'page' : undefined}
+            onClick={() => onTab(key)}>
+            <Icon />
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
     </nav>
   )
 }

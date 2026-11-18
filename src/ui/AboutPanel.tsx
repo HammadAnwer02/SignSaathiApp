@@ -1,8 +1,13 @@
 import type { SignIndex } from '../signs/data'
+import logo from '../assets/logo.svg'
 
 export function AboutPanel({ index }: { index: SignIndex | null }) {
   return (
     <div className="about">
+      <div className="about-head">
+        <img src={logo} alt="" width={68} height={68} />
+        <p className="tagline">Bridging Silence, Building Connections</p>
+      </div>
       <p className="lede">
         Sign Saathi turns English and Urdu into Pakistan Sign Language, so families and teachers can start talking with
         the deaf children in their lives.
@@ -35,8 +40,8 @@ export function AboutPanel({ index }: { index: SignIndex | null }) {
         </dd>
         <dt>Avatar</dt>
         <dd>
-          VRM sample model © 2022 pixiv Inc., used under the VRM Public License 1.0. Top recoloured for clearer
-          hands.
+          VRM sample model © 2022 pixiv Inc., used under the VRM Public License 1.0. Skin, hair and eyes recoloured,
+          and the top darkened so the hands read clearly.
         </dd>
         <dt>Built with</dt>
         <dd>three.js, three-vrm, MediaPipe, React and Capacitor.</dd>

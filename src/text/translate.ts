@@ -69,9 +69,13 @@ export function tokenize(text: string): string[] {
 }
 
 /** Display words for a sign: first English and first Urdu synonym, without disambiguation notes. */
+/** Arabic-script letters (not digits), so a label like "b(double-handed-letter)" or "1" isn't taken as the Urdu */
+const URDU_LETTER = /[ء-يٱ-ۓ]/
+
 export function signLabel(s: SignEntry): { en: string; ur?: string; note?: string } {
   const [en, note] = splitNote(s.en[0] ?? s.label)
-  const ur = s.ur.length ? splitNote(s.ur[0])[0] : undefined
+  const urAlias = s.ur.find((u) => URDU_LETTER.test(u))
+  const ur = urAlias ? splitNote(urAlias)[0] : undefined
   return { en, ur, note }
 }
 

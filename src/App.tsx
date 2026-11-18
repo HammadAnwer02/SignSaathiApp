@@ -4,10 +4,24 @@ import { TranslatePanel } from './ui/TranslatePanel'
 import { DictionaryPanel } from './ui/DictionaryPanel'
 import { AboutPanel } from './ui/AboutPanel'
 import { TabBar, type Tab } from './ui/TabBar'
+import { Welcome } from './ui/Welcome'
 import type { AvatarEngine } from './avatar/engine'
+import { signerById, type SignerId } from './avatar/signers'
 import { loadIndex, type SignIndex } from './signs/data'
 import { buildLexicon, signLabel, translate, type GlossItem } from './text/translate'
 import { hideSplash, prefs } from './native'
+import logo from './assets/logo.svg'
+
+const RECENT_MAX = 5
+
+function readRecent(raw: string | null): string[] {
+  try {
+    const list: unknown = JSON.parse(raw ?? '[]')
+    return Array.isArray(list) ? list.filter((s): s is string => typeof s === 'string').slice(0, RECENT_MAX) : []
+  } catch {
+    return []
+  }
+}
 
 /** One playable step: a sign, or one letter of a fingerspelled word. */
 export interface Unit {
@@ -45,10 +59,39 @@ export function App() {
   const [active, setActive] = useState(-1)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeedState] = useState(0.75)
+  /** null until we know whether this is the first launch */
+  const [welcome, setWelcome] = useState<boolean | null>(null)
+  const [recent, setRecent] = useState<string[]>([])
+  const recentLoaded = useRef(false)
+  /** null until the saved choice is read, so we don't download one signer only to swap it straight away */
+  const [signerId, setSignerId] = useState<SignerId | null>(null)
 
   useEffect(() => {
     loadIndex().then(setIndex, () => setDataError(true))
     prefs.get('speed').then((v) => v && setSpeedState(Number(v)))
+    prefs.get('signer').then((v) => setSignerId(signerById(v).id))
+    prefs.get('recent').then((v) => {
+      setRecent(readRecent(v))
+      recentLoaded.current = true
+    })
+    // first launch shows the welcome, which lifts the launch screen so people read it while the avatar loads
+    prefs.get('welcomed').then((v) => setWelcome(v !== '1'))
+  }, [])
+
+  useEffect(() => {
+    if (recentLoaded.current) prefs.set('recent', JSON.stringify(recent))
+  }, [recent])
+
+  const dismissWelcome = useCallback(() => {
+    setWelcome(false)
+    prefs.set('welcomed', '1')
+  }, [])
+
+  const chooseSigner = useCallback((id: SignerId) => {
+    engineRef.current?.stop()
+    setReady(false) // until the new signer has loaded
+    setSignerId(id)
+    prefs.set('signer', id)
   }, [])
 
   const setSpeed = useCallback((s: number) => {
@@ -82,9 +125,17 @@ export function App() {
     const items = translate(text, lex)
     setSentence({ text, items })
     perform(items, 'translate')
+    if (items.length) setRecent((list) => [text, ...list.filter((t) => t !== text)].slice(0, RECENT_MAX))
   }, [lex, perform])
 
   const stop = useCallback(() => engineRef.current?.stop(), [])
+
+  const clearSentence = useCallback(() => {
+    engineRef.current?.stop()
+    setSentence(null)
+    setPerf(null)
+    setActive(-1)
+  }, [])
 
   const caption: Caption | null = useMemo(() => {
     if (!perf || active < 0 || !lex) return null
@@ -113,51 +164,70 @@ export function App() {
   const activeItem = perf && activeUnit ? perf.first + activeUnit.item : -1
 
   return (
-    <div className={`app tab-${tab}`}>
-      <header className="masthead">
-        <span className="wordmark">Sign Saathi</span>
-        <span className="wordmark-ur ur" lang="ur">سائن ساتھی</span>
-      </header>
+    <>
+      <div className={`app tab-${tab}`} inert={!!welcome}>
+        <header className="masthead">
+          <span className="brand">
+            <img src={logo} alt="" width={32} height={32} />
+            <span className="wordmark">Sign Saathi</span>
+          </span>
+          <span className="wordmark-ur ur" lang="ur">سائن ساتھی</span>
+        </header>
 
-      <AvatarStage
-        onEngine={onEngine}
-        caption={caption}
-        playing={playing}
-        canReplay={!!perf?.units.length}
-        speed={speed}
-        onSpeed={setSpeed}
-        onReplay={replay}
-        onStop={stop}
-      />
+        <AvatarStage
+          signer={signerById(signerId)}
+          loadSigner={signerId !== null}
+          onSigner={chooseSigner}
+          onEngine={onEngine}
+          caption={caption}
+          playing={playing}
+          canReplay={!!perf?.units.length}
+          speed={speed}
+          onSpeed={setSpeed}
+          onReplay={replay}
+          onStop={stop}
+        />
 
-      <main className="panel">
-        {dataError ? (
-          <p className="notice">The sign data didn't load. Close and reopen the app to try again.</p>
-        ) : tab === 'translate' ? (
-          <TranslatePanel
-            ready={ready && !!lex}
-            sentence={sentence}
-            activeItem={perf?.source === 'translate' ? activeItem : -1}
-            onSubmit={submit}
-            onPlayItem={(i) => sentence && perform([sentence.items[i]], 'translate', i)}
-            lexicon={lex}
-          />
-        ) : tab === 'dictionary' ? (
-          <DictionaryPanel
-            index={index}
-            ready={ready}
-            activeId={perf?.source === 'dictionary' && playing ? perf.units[0]?.id : undefined}
-            onPlay={(id) => {
-              const s = lex?.signs.get(id)
-              if (s) perform([{ kind: 'sign', text: signLabel(s).en, seq: [id], alts: [] }], 'dictionary')
-            }}
-          />
-        ) : (
-          <AboutPanel index={index} />
-        )}
-      </main>
+        {/* every section stays mounted with its own scroller, so switching tabs keeps what you typed,
+            your search and where you had scrolled to */}
+        <main className="panel">
+          {dataError ? (
+            <p className="notice pane">The sign data didn't load. Close and reopen the app to try again.</p>
+          ) : (
+            <>
+              <div className="pane" hidden={tab !== 'translate'}>
+                <TranslatePanel
+                  ready={ready && !!lex}
+                  sentence={sentence}
+                  activeItem={perf?.source === 'translate' ? activeItem : -1}
+                  recent={recent}
+                  onSubmit={submit}
+                  onPlayItem={(i) => sentence && perform([sentence.items[i]], 'translate', i)}
+                  onClear={clearSentence}
+                  onForgetRecent={() => setRecent([])}
+                />
+              </div>
+              <div className="pane" hidden={tab !== 'dictionary'}>
+                <DictionaryPanel
+                  index={index}
+                  ready={ready}
+                  activeId={perf?.source === 'dictionary' && playing ? perf.units[0]?.id : undefined}
+                  onPlay={(id) => {
+                    const s = lex?.signs.get(id)
+                    if (s) perform([{ kind: 'sign', text: signLabel(s).en, seq: [id], alts: [] }], 'dictionary')
+                  }}
+                />
+              </div>
+              <div className="pane" hidden={tab !== 'about'}>
+                <AboutPanel index={index} />
+              </div>
+            </>
+          )}
+        </main>
 
-      <TabBar tab={tab} onTab={setTab} />
-    </div>
+        <TabBar tab={tab} onTab={setTab} />
+      </div>
+      {welcome && <Welcome onContinue={dismissWelcome} />}
+    </>
   )
 }

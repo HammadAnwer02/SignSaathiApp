@@ -2,16 +2,17 @@
   "appId": "com.hammadanwer.signsaathi",
   "appName": "Sign Saathi",
   "webDir": "dist",
-  "backgroundColor": "#f1f4f7",
+  "backgroundColor": "#f6f4eb",
   "ios": {
     "contentInset": "never"
   },
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": false,
-      "backgroundColor": "#f1f4f7",
+      "backgroundColor": "#f6f4eb",
       "showSpinner": true,
-      "iosSpinnerStyle": "small"
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#176b87"
     },
     "Keyboard": {
       "resize": "native"

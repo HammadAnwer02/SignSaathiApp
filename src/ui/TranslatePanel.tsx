@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { GlossItem, Lexicon } from '../text/translate'
-import { LettersIcon, SendIcon } from './icons'
+import type { GlossItem } from '../text/translate'
+import { ClearIcon, LettersIcon, RecentIcon, SendIcon } from './icons'
 import { tap } from '../native'
 
 const EXAMPLES = [
@@ -11,16 +11,21 @@ const EXAMPLES = [
   { text: 'آپ کا نام کیا ہے', lang: 'ur' },
 ]
 
+const isUrdu = (s: string) => /[؀-ۿ]/.test(s)
+
 interface Props {
   ready: boolean
   sentence: { text: string; items: GlossItem[] } | null
   activeItem: number
-  lexicon: Lexicon | null
+  recent: string[]
   onSubmit: (text: string) => void
   onPlayItem: (i: number) => void
+  /** start over: forget the signed sentence and show the suggestions again */
+  onClear: () => void
+  onForgetRecent: () => void
 }
 
-export function TranslatePanel({ ready, sentence, activeItem, onSubmit, onPlayItem }: Props) {
+export function TranslatePanel({ ready, sentence, activeItem, recent, onSubmit, onPlayItem, onClear, onForgetRecent }: Props) {
   const [text, setText] = useState('')
   const input = useRef<HTMLTextAreaElement>(null)
 
@@ -39,6 +44,11 @@ export function TranslatePanel({ ready, sentence, activeItem, onSubmit, onPlayIt
     input.current?.blur()
   }
 
+  const pick = (value: string) => {
+    setText(value)
+    send(value)
+  }
+
   return (
     <div className="translate">
       <div className="sentence">
@@ -55,7 +65,7 @@ export function TranslatePanel({ ready, sentence, activeItem, onSubmit, onPlayIt
                     }}
                     aria-label={it.kind === 'spell' ? `${it.text}, fingerspelled` : it.text}
                   >
-                    <span className={/[؀-ۿ]/.test(it.text) ? 'ur' : undefined}>{it.text}</span>
+                    <span className={isUrdu(it.text) ? 'ur' : undefined}>{it.text}</span>
                     {it.kind === 'spell' && <LettersIcon />}
                   </button>
                 </li>
@@ -67,23 +77,49 @@ export function TranslatePanel({ ready, sentence, activeItem, onSubmit, onPlayIt
         ) : (
           <div className="examples">
             <p className="hint">Type a sentence and the avatar signs it. Words without a sign are fingerspelled.</p>
-            <ul>
-              {EXAMPLES.map((e) => (
-                <li key={e.text}>
-                  <button
-                    className={`example ${e.lang === 'ur' ? 'ur' : ''}`}
-                    lang={e.lang}
-                    disabled={!ready}
-                    onClick={() => {
-                      setText(e.text)
-                      send(e.text)
-                    }}
-                  >
-                    {e.text}
+
+            {recent.length > 0 && (
+              <section aria-labelledby="recent-title">
+                <h2 className="section-title" id="recent-title">
+                  Recent
+                  <button onClick={onForgetRecent} aria-label="Clear recent sentences">
+                    Clear
                   </button>
-                </li>
-              ))}
-            </ul>
+                </h2>
+                <ul className="recents">
+                  {recent.map((r) => (
+                    <li key={r}>
+                      <button className="recent" disabled={!ready} onClick={() => pick(r)}>
+                        <RecentIcon />
+                        <span className={isUrdu(r) ? 'ur' : undefined} lang={isUrdu(r) ? 'ur' : undefined}>
+                          {r}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <section aria-labelledby="try-title">
+              <h2 className="section-title" id="try-title">
+                Try one
+              </h2>
+              <ul className="suggestions">
+                {EXAMPLES.map((e) => (
+                  <li key={e.text}>
+                    <button
+                      className={`suggestion ${e.lang === 'ur' ? 'ur' : ''}`}
+                      lang={e.lang}
+                      disabled={!ready}
+                      onClick={() => pick(e.text)}
+                    >
+                      {e.text}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
         )}
       </div>
@@ -95,25 +131,43 @@ export function TranslatePanel({ ready, sentence, activeItem, onSubmit, onPlayIt
           send()
         }}
       >
-        <textarea
-          ref={input}
-          rows={1}
-          value={text}
-          dir="auto"
-          enterKeyHint="go"
-          placeholder="Type in English or اردو"
-          aria-label="Sentence to sign"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              send()
-            }
-          }}
-        />
-        <button className="send" type="submit" disabled={!ready || !text.trim()} aria-label="Sign it">
-          <SendIcon />
-        </button>
+        <div className="field">
+          <textarea
+            ref={input}
+            rows={1}
+            value={text}
+            dir="auto"
+            enterKeyHint="go"
+            placeholder="Type in English or اردو"
+            aria-label="Sentence to sign"
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                send()
+              }
+            }}
+          />
+          {(text || sentence) && (
+            <button
+              type="button"
+              className="clear"
+              aria-label="Start a new sentence"
+              // keep the keyboard as it was: up if you were typing, down so the suggestions show if not
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                tap()
+                setText('')
+                onClear()
+              }}
+            >
+              <ClearIcon />
+            </button>
+          )}
+          <button className="send" type="submit" disabled={!ready || !text.trim()} aria-label="Sign it">
+            <SendIcon />
+          </button>
+        </div>
       </form>
     </div>
   )
