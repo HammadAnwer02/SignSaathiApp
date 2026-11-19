@@ -20,9 +20,6 @@ export interface PlayRequest {
 
 export type EngineState = 'loading' | 'ready' | 'error'
 
-/** height of the band the stage controls take at the top of the stage (.stage-controls: 12px inset + 44px buttons) */
-const CONTROLS_PX = 60
-
 export class AvatarEngine {
   private renderer: WebGLRenderer
   private scene = new Scene()
@@ -39,10 +36,17 @@ export class AvatarEngine {
   private nextBlink = 2
   private disposed = false
   private playToken = 0
+  /** the play() whose sequence is running; a stop or a newer play() changes playToken and so voids it */
+  private finishToken = -1
   private loadToken = 0
   speed = 1
+  /** how far buttons over the top of the stage reach down, in px (the stage controls: 8px inset + 44px buttons);
+   *  the framing keeps the head clear of them */
+  private topClear = 60
   onChip?: (chip: number) => void
   onPlaying?: (playing: boolean) => void
+  /** a sequence played through to its end (not stopped, not replaced by another) */
+  onFinish?: () => void
 
   constructor(private container: HTMLElement) {
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
@@ -91,7 +95,11 @@ export class AvatarEngine {
     this.solver = new Solver(this.rest)
     this.player = new Player(this.solver.idle)
     this.player.onChip = (c) => this.onChip?.(c)
-    this.player.onEnd = () => this.onPlaying?.(false)
+    this.player.onEnd = () => {
+      this.onPlaying?.(false)
+      // a stop also ends with the glide back to rest; only a sequence that ran its course counts
+      if (this.finishToken === this.playToken) this.onFinish?.()
+    }
     this.applyPose(this.player.pose)
     this.resize()
   }
@@ -119,6 +127,7 @@ export class AvatarEngine {
     const motions = await Promise.all(requests.map((r) => this.motion(r.id)))
     if (token !== this.playToken || !this.player) return
     this.player.play(requests.map((r, i) => ({ motion: motions[i], chip: r.chip, letter: r.letter })))
+    this.finishToken = token
     this.onPlaying?.(this.player.playing)
   }
 
@@ -235,6 +244,12 @@ export class AvatarEngine {
     })
   }
 
+  setTopClear(px: number) {
+    if (px === this.topClear) return
+    this.topClear = px
+    this.resize()
+  }
+
   private resize() {
     const w = Math.max(1, this.container.clientWidth)
     const h = Math.max(1, this.container.clientHeight)
@@ -251,7 +266,7 @@ export class AvatarEngine {
       const tan = Math.tan((this.camera.fov * Math.PI) / 360)
       // the speed and replay buttons cover the top of the stage: keep the hair below them,
       // sliding the avatar down when there is room and pulling back when there isn't
-      const clear = Math.min(0.4, CONTROLS_PX / h)
+      const clear = Math.min(0.4, this.topClear / h)
       const span = Math.max(top - bottom, (r.topY - bottom) / (1 - clear))
       const dist = Math.max(span / (2 * tan), width / (2 * tan * this.camera.aspect))
       const view = 2 * dist * tan

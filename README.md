@@ -37,7 +37,8 @@ to build from the cache. To move to the latest Capacitor once GitHub is reachabl
 npm i @capacitor/core@latest @capacitor/ios@latest && npm i -D @capacitor/cli@latest && npm run ios
 ```
 
-The native shell in `ios/App` matches Capacitor 8.4.1's template. Newer templates add a `SceneDelegate`, so compare
+The native shell in `ios/App` is Capacitor 8.4.1's template plus a `SceneDelegate` and the scene manifest in
+`Info.plist`: iOS 27 refuses to launch an app that hasn't adopted the scene life cycle (it traps at launch). Compare
 against a fresh `npx cap add ios` when upgrading.
 
 ## How it works
@@ -72,6 +73,14 @@ Adding signs later means adding videos plus mapping entries and re-running `extr
 - `avatar/player.ts` strings signs together with eased transitions, keeps hands up between signs, and plays
   only the held handshape of fingerspelled letters.
 - `avatar/engine.ts` is the three.js scene (VRM avatar via three-vrm, interpreter framing, blinking, breathing).
+- `ui/Practice.tsx` is practising along: the front camera as a mirror under the signer, with the sign repeating.
+- `learn/` is the Learn tab's course: units of dictionary signs, lessons of three or four new signs with
+  watch-and-choose exercises, XP, a streak and spaced review, all kept on the device.
+- `check/` checks a learner's signing in a lesson's "Sign it" step. MediaPipe's holistic tracker follows the front
+  camera in a worker (`tracker.worker.ts`), and `match.ts` compares each hand's shape, facing and place against the
+  shoulders with the sign's recording, allowing for a slower pace and for the other hand. A sign passes when it's
+  close enough (`PASS`) and no other course sign fits the same signing clearly better (`MARGIN`). `bench.ts` times
+  the tracker on a device (see its header).
 
 QA: `window.__engine.debugPose(signId, frame)` freezes the avatar on one frame, so it can be screenshotted
 next to the source video frame (`start` in `index.json` is the trimmed clip's first video frame).
@@ -81,6 +90,8 @@ next to the source video frame (`start` in `index.json` is the trimmed clip's fi
 - **Signs:** PSL dictionary `pk-hfad-1` (775 usable signs) recorded at Hamza Foundation Academy for the Deaf,
   Lahore, published by the [sign-language-translator](https://github.com/sign-language-translator/sign-language-datasets)
   project under **CC BY 4.0**. The credit in the About screen is required by the licence.
+- **Hand tracking:** Google's MediaPipe Tasks Vision (`@mediapipe/tasks-vision`) and its holistic landmarker model,
+  copied from `pipeline/.cache/models/` to `public/models/holistic_landmarker.task`, both Apache 2.0.
 - **Female signer (stand-in):** `VRM1_Constraint_Twist_Sample` © 2022 pixiv Inc., VRM Public License 1.0
   (commercial use, modification and redistribution allowed). When it loads, the app recolours its skin and eyes,
   hides its hair under a hijab built to fit its head, gives it full sleeves and turns its top into a plain abaya.
@@ -107,7 +118,11 @@ next to the source video frame (`start` in `index.json` is the trimmed clip's fi
 - **Review:** every sign should be checked by a fluent (ideally Deaf) PSL signer.
 - **Signers:** both are pixiv sample models dressed in code, and they still look anime. A matching pair made for Sign
   Saathi is needed; the brief for a 3D artist is under Signers below.
-- **Not built yet:** voice input, lessons and quizzes, camera practice.
+- **Course:** the Learn tab's lessons haven't been checked by a Deaf PSL teacher (the app says so).
+- **Sign check:** tested on the dictionary's own videos and timed on an iPhone 17 Pro Max (about 50 ms a frame), but
+  not yet with learners signing, so how strict `PASS` should be is still open. It also lets through signs that
+  contain the one asked for (*mother* contains *woman*) and letters a finger apart (m and n, u and r).
+- **Not built yet:** voice input.
 
 ## Signers (female and male)
 

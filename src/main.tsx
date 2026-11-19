@@ -11,3 +11,6 @@ watchKeyboard()
 // The splash normally hides once the avatar is ready; never leave someone stuck behind it.
 setTimeout(hideSplash, 10_000)
 createRoot(document.getElementById('root')!).render(<App />)
+
+// a speed test of the sign check, in builds made for it (VITE_BENCH=1) only
+if (import.meta.env.VITE_BENCH) void import('./check/bench').then((m) => m.runBench())

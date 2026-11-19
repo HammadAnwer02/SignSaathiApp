@@ -1,9 +1,10 @@
-import { BookIcon, HandIcon, InfoIcon } from './icons'
+import { BookIcon, HandIcon, InfoIcon, LearnIcon } from './icons'
 
-export type Tab = 'translate' | 'dictionary' | 'about'
+export type Tab = 'translate' | 'learn' | 'dictionary' | 'about'
 
 const TABS: { key: Tab; label: string; Icon: () => React.ReactElement }[] = [
   { key: 'translate', label: 'Translate', Icon: () => <HandIcon /> },
+  { key: 'learn', label: 'Learn', Icon: () => <LearnIcon /> },
   { key: 'dictionary', label: 'Dictionary', Icon: () => <BookIcon /> },
   { key: 'about', label: 'About', Icon: () => <InfoIcon /> },
 ]

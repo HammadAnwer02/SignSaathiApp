@@ -3,7 +3,7 @@
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
 import { SplashScreen } from '@capacitor/splash-screen'
-import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
 
 export const isNative = Capacitor.isNativePlatform()
 
@@ -39,4 +39,9 @@ export function watchKeyboard() {
 
 export function tap() {
   if (isNative) Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+}
+
+/** the tap you feel for a right or a wrong answer */
+export function buzz(right: boolean) {
+  if (isNative) Haptics.notification({ type: right ? NotificationType.Success : NotificationType.Error }).catch(() => {})
 }
