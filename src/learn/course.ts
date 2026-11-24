@@ -1,6 +1,8 @@
 // The course: units of signs in teaching order, and the lessons each unit splits into.
-// Every sign here is one the dataset has in good quality. Everyday basics it doesn't have yet (hello, thank you, yes,
-// where, the numbers 2, 3 and 6) join when they are recorded, and the whole course wants a Deaf PSL teacher's review.
+// Signs were picked for being well tracked in the dataset; a few with one hand over or against the other (horse,
+// restaurant, time, train) grade lower in index.json, since the covered hand is only partly seen. Everyday basics it
+// doesn't have yet (hello, thank you, yes, where, the numbers 2, 3 and 6) join when they are recorded, and the whole
+// course wants a Deaf PSL teacher's review.
 
 import type { SignEntry, SignIndex } from '../signs/data'
 import { signLabel } from '../text/translate'

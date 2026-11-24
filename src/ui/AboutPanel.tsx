@@ -40,9 +40,8 @@ export function AboutPanel({ index }: { index: SignIndex | null }) {
         </dd>
         <dt>Signers</dt>
         <dd>
-          Two sample models by pixiv Inc., restyled in the app. The woman is the VRM 1.0 sample (© 2022 pixiv Inc.,
-          VRM Public License 1.0), dressed in a hijab, an abaya and full sleeves. The man is AvatarSample_C by VRoid
-          Project, used under its VRoid Hub terms, given short hair, a trimmed beard and a plain shirt.
+          Made for Sign Saathi in Blender with MPFB, from MakeHuman's CC0 bodies, faces and expressions. The woman
+          wears a shalwar kameez and hijab, the man a kameez shalwar.
         </dd>
         <dt>Built with</dt>
         <dd>three.js, three-vrm, MediaPipe, React and Capacitor.</dd>
