@@ -2,15 +2,15 @@
 // that feeds Player poses into the avatar's normalized bones.
 
 import {
-  AmbientLight, Clock, DirectionalLight, PerspectiveCamera, Quaternion, Scene, Vector3, WebGLRenderer,
+  AmbientLight, Clock, DirectionalLight, PerspectiveCamera, PMREMGenerator, Quaternion, Scene, Vector3, WebGLRenderer,
 } from 'three'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { VRMLoaderPlugin, VRMUtils, type VRM } from '@pixiv/three-vrm'
 import { loadClip, loadIndex } from '../signs/data'
 import { BONE_COUNT, CHEST, NECK, measureRest, toVrm0, type Rest } from './rig'
 import { EXPRESSIONS, Solver, type Motion } from './solver'
 import { Player } from './player'
-import { applyLook } from './looks'
 
 export interface PlayRequest {
   id: string
@@ -60,6 +60,14 @@ export class AvatarEngine {
     const fill = new DirectionalLight(0xfff1dc, 0.9)
     fill.position.set(-1.5, 1.2, 1)
     this.scene.add(key, fill, new AmbientLight(0xffffff, 0.75))
+    // Soft light from all round a room, for signers with PBR materials: under the two lights alone their faces sit
+    // in shadow. MToon (toon) materials ignore scene.environment, so a toon signer looks exactly as it did.
+    const pmrem = new PMREMGenerator(this.renderer)
+    const room = new RoomEnvironment()
+    this.scene.environment = pmrem.fromScene(room, 0.04).texture
+    this.scene.environmentIntensity = 0.45
+    room.dispose()
+    pmrem.dispose()
 
     this.resizeObs = new ResizeObserver(() => this.resize())
     this.resizeObs.observe(container)
@@ -87,7 +95,6 @@ export class AvatarEngine {
     vrm.scene.traverse((o) => {
       o.frustumCulled = false
     })
-    applyLook(vrm)
     this.scene.add(vrm.scene)
     if (vrm.lookAt) vrm.lookAt.target = this.camera
     this.vrm = vrm
@@ -154,6 +161,7 @@ export class AvatarEngine {
     this.resizeObs.disconnect()
     document.removeEventListener('visibilitychange', this.onVisibility)
     this.unload()
+    this.scene.environment?.dispose()
     this.renderer.dispose()
     this.renderer.forceContextLoss()
     this.renderer.domElement.remove()

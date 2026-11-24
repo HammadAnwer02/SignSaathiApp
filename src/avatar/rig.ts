@@ -27,6 +27,15 @@ export const FINGER_LANDMARKS = [
   [17, 18, 19, 20],
 ] as const
 
+/** Where points sit in a baked clip frame, per side (left, right): body points (pipeline/bake.py BODY), and the first
+ *  of each hand's 21 points. */
+export const CLIP_POINT = {
+  shoulder: [5, 6],
+  elbow: [7, 8],
+  wrist: [9, 10],
+  hand: [13, 34],
+} as const
+
 export const BONES: VRMHumanBoneName[] = ['spine', 'chest', 'neck', 'head']
 export const PARENT: number[] = [-1, 0, 1, 2]
 /** per side: index of upperArm, lowerArm, hand and the 5x3 finger bones */
@@ -64,6 +73,8 @@ export interface Rest {
   nodes: (Object3D | null)[]
   /** rest direction of each bone (towards its child), model space, unit length */
   dir: Vector3[]
+  /** rest position of each bone (where it turns), model space */
+  pos: Vector3[]
   /** per side: index knuckle minus little knuckle at rest (unit) */
   handSide: [Vector3, Vector3]
   /** model-space heights used for camera framing */
@@ -126,6 +137,12 @@ export function measureRest(vrm: VRM): Rest {
     handSide.push(between(`${side}LittleProximal`, `${side}IndexProximal`, new Vector3(0, 0, 1)))
   })
 
+  // a bone the model lacks (fingers are optional) sits where its parent does
+  const at: Vector3[] = []
+  BONES.forEach((name, b) => {
+    at.push(pos(name) ?? (PARENT[b] >= 0 ? at[PARENT[b]].clone() : new Vector3()))
+  })
+
   const y = (name: VRMHumanBoneName, fallback: number) => pos(name)?.y ?? fallback
   const lu = pos('leftUpperArm')
   const ru = pos('rightUpperArm')
@@ -134,6 +151,7 @@ export function measureRest(vrm: VRM): Rest {
   return {
     nodes: BONES.map((b) => node(b)),
     dir,
+    pos: at,
     handSide: handSide as [Vector3, Vector3],
     headY,
     topY: Number.isFinite(topY) && topY > headY ? topY : headY + 0.2,
